@@ -32,6 +32,9 @@ export default function ContentItemCard({ item, tripId, dayId, onUpdateDescripti
                 onPress={() => {
                     if (item.type === 'photo') {
                         onImagePress(item.uri);
+                    } else if (item.type === 'link') {
+                        // Open link directly
+                        require('expo-linking').openURL(item.uri);
                     } else {
                         onFilePress(item.uri);
                     }
@@ -42,6 +45,10 @@ export default function ContentItemCard({ item, tripId, dayId, onUpdateDescripti
             >
                 {item.type === 'photo' ? (
                     <Image source={{ uri: item.uri }} style={styles.image} resizeMode="cover" />
+                ) : item.type === 'link' ? (
+                    <View style={[styles.image, styles.linkIcon]}>
+                        <Ionicons name="link-outline" size={32} color={Colors.primary} />
+                    </View>
                 ) : (
                     <View style={[styles.image, styles.fileIcon]}>
                         <Ionicons name="document-text-outline" size={32} color={Colors.primary} />
@@ -54,17 +61,38 @@ export default function ContentItemCard({ item, tripId, dayId, onUpdateDescripti
                 <View style={styles.info}>
                     <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
                     <Text style={styles.meta}>
-                        {item.type === 'photo' ? '사진' : '파일'} • {new Date(item.createdAt).toLocaleDateString()}
+                        {item.type === 'photo' ? '사진' : item.type === 'link' ? '링크' : '파일'} • {new Date(item.createdAt).toLocaleDateString()}
                     </Text>
                 </View>
 
-                {/* Share Button */}
-                <TouchableOpacity
-                    style={styles.shareButton}
-                    onPress={() => onSharePress(item.uri)}
-                >
-                    <Ionicons name="share-outline" size={20} color={Colors.textTertiary} />
-                </TouchableOpacity>
+                {/* Copy & Share Buttons */}
+                <View style={styles.actions}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={async () => {
+                            try {
+                                const Clipboard = require('expo-clipboard');
+                                if (Clipboard && typeof Clipboard.setStringAsync === 'function') {
+                                    await Clipboard.setStringAsync(item.uri);
+                                    Alert.alert('알림', item.type === 'link' ? '링크가 복사되었습니다.' : '경로가 복사되었습니다.');
+                                } else {
+                                    Alert.alert('알림', '복사 기능을 사용할 수 없습니다. 앱을 최신 버전으로 업데이트 해주세요.');
+                                }
+                            } catch (e) {
+                                console.error('Clipboard error:', e);
+                                Alert.alert('오류', '복사 기능을 사용할 수 없습니다. (모듈 없음)');
+                            }
+                        }}
+                    >
+                        <Ionicons name="copy-outline" size={20} color={Colors.textTertiary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => onSharePress(item.uri)}
+                    >
+                        <Ionicons name="share-outline" size={20} color={Colors.textTertiary} />
+                    </TouchableOpacity>
+                </View>
             </TouchableOpacity>
 
             {/* Memo Area */}
@@ -133,6 +161,13 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.border,
     },
+    linkIcon: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.border,
+        backgroundColor: '#FFF4ED',
+    },
     fileExt: {
         fontSize: 10,
         fontWeight: '700',
@@ -198,7 +233,12 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 12,
     },
-    shareButton: {
+    actions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    actionButton: {
         padding: 8,
+        marginLeft: 4,
     },
 });

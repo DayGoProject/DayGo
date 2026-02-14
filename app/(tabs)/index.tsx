@@ -4,33 +4,36 @@ import { router, useFocusEffect, useNavigation } from 'expo-router';
 import { useTripStore } from '@/store/tripStore';
 import { AddTripModal } from '@/components/AddTripModal';
 import { EditTripModal } from '@/components/EditTripModal';
-import { SideMenu } from '@/components/SideMenu';
 import { ActionSheet } from '@/components/ActionSheet';
 import { Ionicons } from '@expo/vector-icons';
+import { useUIStore } from '@/store/uiStore';
 import { Trip } from '@/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Shadows, Layout } from '@/lib/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAlert } from '@/components/AlertProvider';
 
 export default function TripsScreen() {
     const navigation = useNavigation();
     const { trips, isLoading, loadTrips, addTrip, deleteTrip, updateTripDates } = useTripStore();
+    const { openSideMenu } = useUIStore(); // [코다리 부장] 전역 스토어 사용!
+    const { showAlert } = useAlert();
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
     const [isMenuVisible, setIsMenuVisible] = useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-    const [isSideMenuVisible, setIsSideMenuVisible] = useState(false); // [코다리 부장] 사이드 메뉴 상태!
+    // const [isSideMenuVisible, setIsSideMenuVisible] = useState(false); // 로컬 상태 제거
 
     // [코다리 부장] 헤더에 햄버거 메뉴 버튼 추가! 🍔 (왼쪽 상단)
     useLayoutEffect(() => {
         navigation.setOptions({
             headerLeft: () => (
-                <TouchableOpacity onPress={() => setIsSideMenuVisible(true)} style={{ marginLeft: 16 }}>
+                <TouchableOpacity onPress={openSideMenu} style={{ marginLeft: 16 }}>
                     <Ionicons name="menu" size={28} color={Colors.textPrimary} />
                 </TouchableOpacity>
             ),
         });
-    }, [navigation]);
+    }, [navigation, openSideMenu]);
 
     // Animation values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -143,15 +146,11 @@ export default function TripsScreen() {
         <SafeAreaView style={styles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-            {/* [코다리 부장] 사이드 메뉴 추가! */}
-            <SideMenu
-                visible={isSideMenuVisible}
-                onClose={() => setIsSideMenuVisible(false)}
-            />
+
 
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.headerSubtitle}>여행을 떠나볼까요?</Text>
+                    <Text style={styles.headerSubtitle}>여행 자료를 관리해볼까요?</Text>
                     <Text style={styles.headerTitle}>나의 여행</Text>
                 </View>
                 <TouchableOpacity
@@ -225,7 +224,7 @@ export default function TripsScreen() {
                         isDestructive: true,
                         onPress: () => {
                             // [코다리 부장] 삭제 전 한 번 더 물어보기 (실수 방지!)
-                            Alert.alert(
+                            showAlert(
                                 '여행 삭제',
                                 `'${selectedTrip?.title}' 여행을 정말 삭제하시겠습니까?`,
                                 [

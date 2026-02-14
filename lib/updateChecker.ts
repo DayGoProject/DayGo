@@ -1,11 +1,10 @@
 import * as Updates from 'expo-updates';
-import { Alert } from 'react-native';
-import { useEffect } from 'react';
+import { AlertButton } from '@/components/AlertProvider';
 
 /**
  * 앱 업데이트 확인 및 사용자 선택 기능
  */
-export async function checkForAppUpdates() {
+export async function checkForAppUpdates(showAlert: (title: string, message: string, buttons?: AlertButton[]) => void) {
     try {
         // 개발 모드에서는 업데이트 확인 안 함
         if (__DEV__) {
@@ -17,7 +16,7 @@ export async function checkForAppUpdates() {
 
         if (update.isAvailable) {
             // 사용자에게 업데이트 여부 물어보기
-            Alert.alert(
+            showAlert(
                 '업데이트 가능',
                 '새로운 버전이 있습니다. 지금 업데이트하시겠습니까?',
                 [
@@ -34,7 +33,7 @@ export async function checkForAppUpdates() {
                                 await Updates.fetchUpdateAsync();
 
                                 // 앱 재시작하여 업데이트 적용
-                                Alert.alert(
+                                showAlert(
                                     '업데이트 완료',
                                     '업데이트가 완료되었습니다. 앱을 다시 시작합니다.',
                                     [
@@ -44,12 +43,11 @@ export async function checkForAppUpdates() {
                                                 await Updates.reloadAsync();
                                             },
                                         },
-                                    ],
-                                    { cancelable: false }
+                                    ]
                                 );
                             } catch (error) {
                                 console.error('업데이트 실패:', error);
-                                Alert.alert(
+                                showAlert(
                                     '업데이트 실패',
                                     '업데이트 중 오류가 발생했습니다. 나중에 다시 시도해주세요.'
                                 );
@@ -64,14 +62,4 @@ export async function checkForAppUpdates() {
     } catch (error) {
         console.error('업데이트 확인 실패:', error);
     }
-}
-
-/**
- * 앱 시작 시 자동으로 업데이트 확인
- */
-export function useUpdateChecker() {
-    // 앱이 포그라운드로 돌아올 때마다 업데이트 확인
-    useEffect(() => {
-        checkForAppUpdates();
-    }, []);
 }

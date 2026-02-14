@@ -3,30 +3,39 @@ import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { checkForAppUpdates } from '@/lib/updateChecker';
-
-/**
- * 루트 레이아웃
- * 전체 앱의 최상위 레이아웃 컴포넌트
- */
+import { SideMenu } from '@/components/SideMenu';
+import { useUIStore } from '@/store/uiStore';
+import { Colors } from '@/lib/theme';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { AlertProvider, useAlert } from '@/components/AlertProvider';
 
-/**
- * 루트 레이아웃
- * 전체 앱의 최상위 레이아웃 컴포넌트
- */
-export default function RootLayout() {
-    // 앱 시작 시 업데이트 확인
+function AppContent() {
+    const { isSideMenuVisible, closeSideMenu } = useUIStore();
+    const { showAlert } = useAlert();
+
     useEffect(() => {
-        console.log('Update checker initialized'); // Update trigger v1
-        checkForAppUpdates();
+        console.log('Update checker initialized');
+        checkForAppUpdates(showAlert);
     }, []);
 
     return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+            <StatusBar style="dark" />
+            <Slot />
+            <SideMenu
+                visible={isSideMenuVisible}
+                onClose={closeSideMenu}
+            />
+        </SafeAreaView>
+    );
+}
+
+export default function RootLayout() {
+    return (
         <SafeAreaProvider>
-            <SafeAreaView style={{ flex: 1 }}>
-                <StatusBar style="auto" />
-                <Slot />
-            </SafeAreaView>
+            <AlertProvider>
+                <AppContent />
+            </AlertProvider>
         </SafeAreaProvider>
     );
 }
