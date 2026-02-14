@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Trip } from '@/types';
 import { TripCalendarModal } from '@/components/TripCalendarModal';
+import { useAlert } from '@/components/AlertProvider';
 
 interface EditTripModalProps {
     visible: boolean;
@@ -25,6 +26,7 @@ export function EditTripModal({ visible, trip, onClose, onUpdate }: EditTripModa
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
     const [isCalendarVisible, setIsCalendarVisible] = useState(false);
+    const { showAlert } = useAlert();
 
     useEffect(() => {
         if (trip) {
@@ -61,7 +63,7 @@ export function EditTripModal({ visible, trip, onClose, onUpdate }: EditTripModa
                 );
                 if (!confirmed) return;
             } else {
-                Alert.alert(
+                showAlert(
                     '날짜 수정 주의',
                     '날짜를 수정하면 일차별 내용(사진, 파일)이 초기화됩니다.\n준비물 목록만 유지됩니다.\n계속하시겠습니까?',
                     [

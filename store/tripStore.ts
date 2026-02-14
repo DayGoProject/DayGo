@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Trip, Day, ContentItem, ChecklistItem } from '@/types';
+import { Trip, Day, ContentItem, ChecklistItem, ScheduleItem } from '@/types';
 import { storage } from '@/lib/storage';
 
 interface TripState {
@@ -18,9 +18,14 @@ interface TripState {
     addChecklistItem: (tripId: string, text: string) => Promise<void>;
     toggleChecklistItem: (tripId: string, itemId: string) => Promise<void>;
     removeChecklistItem: (tripId: string, itemId: string) => Promise<void>;
+    updateChecklistItem: (tripId: string, itemId: string, text: string) => Promise<void>;
     setCoverImage: (tripId: string, imageUri: string) => Promise<void>; // [코다리 부장] 배경 선택!
     deleteTrip: (tripId: string) => Promise<void>;
     updateTripDates: (tripId: string, title: string, startDate: string, endDate: string) => Promise<void>;
+
+    // [코다리 부장] 일정표 액션 추가!
+    addScheduleItem: (tripId: string, dayId: string, item: Omit<ScheduleItem, 'id' | 'dayId'>) => Promise<void>;
+    deleteScheduleItem: (tripId: string, dayId: string, itemId: string) => Promise<void>;
 }
 
 /**
@@ -191,7 +196,6 @@ export const useTripStore = create<TripState>((set, get) => ({
         }
     },
 
-
     addChecklistItem: async (tripId: string, text: string) => {
         try {
             const { trips } = get();
@@ -281,6 +285,36 @@ export const useTripStore = create<TripState>((set, get) => ({
             });
         } catch (e) {
             console.error(e);
+        }
+    },
+
+    updateChecklistItem: async (tripId: string, itemId: string, text: string) => {
+        try {
+            const { trips } = get();
+            const tripIndex = trips.findIndex((t) => t.id === tripId);
+            if (tripIndex === -1) return;
+
+            const updatedTrip = { ...trips[tripIndex] };
+            if (!updatedTrip.checklist) return;
+
+            const itemIndex = updatedTrip.checklist.findIndex(i => i.id === itemId);
+            if (itemIndex === -1) return;
+
+            updatedTrip.checklist[itemIndex].text = text;
+            updatedTrip.updatedAt = new Date().toISOString();
+
+            await storage.updateTrip(updatedTrip);
+
+            const newTrips = [...trips];
+            newTrips[tripIndex] = updatedTrip;
+
+            set({
+                trips: newTrips,
+                currentTrip: updatedTrip.id === get().currentTrip?.id ? updatedTrip : get().currentTrip,
+            });
+        } catch (e) {
+            console.error(e);
+            set({ error: '체크리스트 수정 실패' });
         }
     },
 
@@ -389,6 +423,87 @@ export const useTripStore = create<TripState>((set, get) => ({
             });
         } catch (e) {
             set({ error: '여행 수정 실패', isLoading: false });
+        }
+    },
+
+    addScheduleItem: async (tripId: string, dayId: string, itemData) => {
+        try {
+            const { trips } = get();
+            const tripIndex = trips.findIndex((t) => t.id === tripId);
+            if (tripIndex === -1) return;
+
+            // Deep clone structure for immutability
+            const updatedTrip = { ...trips[tripIndex] };
+            updatedTrip.days = [...updatedTrip.days]; // New days array reference
+
+            const dayIndex = updatedTrip.days.findIndex((d) => d.id === dayId);
+            if (dayIndex === -1) return;
+
+            const existingSchedules = updatedTrip.days[dayIndex].schedules || [];
+
+            const newItem: ScheduleItem = {
+                id: Date.now().toString(),
+                dayId,
+                ...itemData,
+            };
+
+            // New Day object reference and New Schedules array reference
+            updatedTrip.days[dayIndex] = {
+                ...updatedTrip.days[dayIndex],
+                schedules: [...existingSchedules, newItem].sort((a, b) => a.time.localeCompare(b.time))
+            };
+
+            updatedTrip.updatedAt = new Date().toISOString();
+
+            await storage.updateTrip(updatedTrip);
+
+            const newTrips = [...trips];
+            newTrips[tripIndex] = updatedTrip;
+
+            set({
+                trips: newTrips,
+                currentTrip: updatedTrip.id === get().currentTrip?.id ? updatedTrip : get().currentTrip,
+            });
+        } catch (e) {
+            console.error(e);
+            set({ error: '일정 추가 실패' });
+        }
+    },
+
+    deleteScheduleItem: async (tripId: string, dayId: string, itemId: string) => {
+        try {
+            const { trips } = get();
+            const tripIndex = trips.findIndex((t) => t.id === tripId);
+            if (tripIndex === -1) return;
+
+            const updatedTrip = { ...trips[tripIndex] };
+            updatedTrip.days = [...updatedTrip.days]; // New days array reference
+
+            const dayIndex = updatedTrip.days.findIndex((d) => d.id === dayId);
+            if (dayIndex === -1) return;
+
+            if (updatedTrip.days[dayIndex].schedules) {
+                // New Day object reference and New Schedules array reference
+                updatedTrip.days[dayIndex] = {
+                    ...updatedTrip.days[dayIndex],
+                    schedules: updatedTrip.days[dayIndex].schedules.filter(s => s.id !== itemId)
+                };
+
+                updatedTrip.updatedAt = new Date().toISOString();
+
+                await storage.updateTrip(updatedTrip);
+
+                const newTrips = [...trips];
+                newTrips[tripIndex] = updatedTrip;
+
+                set({
+                    trips: newTrips,
+                    currentTrip: updatedTrip.id === get().currentTrip?.id ? updatedTrip : get().currentTrip,
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            set({ error: '일정 삭제 실패' });
         }
     },
 }));

@@ -16,12 +16,14 @@ import ChecklistTab from '@/components/ChecklistTab';
 import { ActionSheet } from '@/components/ActionSheet';
 import { Colors, Layout, Shadows } from '@/lib/theme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAlert } from '@/components/AlertProvider';
 
 const HEADER_HEIGHT = 140; // Fixed reduced height
 
 export default function TripDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const { trips, loadTrips, addContentItem, updateContentItem, deleteContentItem, deleteTrip, updateTripDates, setCoverImage, isLoading } = useTripStore(); // [코다리 부장] setCoverImage 추가!
+    const { showAlert } = useAlert();
 
     const [currentTrip, setCurrentTrip] = useState<Trip | null>(null);
     const [selectedDay, setSelectedDay] = useState(1); // 1~N: Day, -1: Checklist
@@ -49,6 +51,11 @@ export default function TripDetailScreen() {
 
     // [코다리 부장] 배경 선택 상태 (갤러리 선택 + 확인 화면)
     const [tempCoverImageUri, setTempCoverImageUri] = useState<string | null>(null);
+
+    // [코다리 부장] 링크 추가 모달 상태
+    const [isLinkModalVisible, setIsLinkModalVisible] = useState(false);
+    const [linkUrl, setLinkUrl] = useState('');
+    const [linkTitle, setLinkTitle] = useState('');
 
     // Scroll Animation - using standard Animated
     const scrollY = useRef(new Animated.Value(0)).current;
@@ -88,18 +95,18 @@ export default function TripDetailScreen() {
             } else {
                 try { await Linking.openURL(uri); } catch { await Sharing.shareAsync(uri, { UTI: getMimeType(uri) }); }
             }
-        } catch (e) { Alert.alert('오류', '파일을 열 수 없습니다.'); }
+        } catch (e) { showAlert('오류', '파일을 열 수 없습니다.'); }
     };
 
     const handleShare = async (uri: string) => {
         if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: getMimeType(uri), dialogTitle: '파일 공유' });
-        else Alert.alert('알림', '공유 미지원');
+        else showAlert('알림', '공유 미지원');
     };
 
     const handleDeleteTrip = () => {
         if (!currentTrip) return;
         // setIsMenuVisible(false); // ActionSheet handles close
-        Alert.alert('삭제', '정말로 이 여행을 삭제하시겠습니까?', [
+        showAlert('삭제', '정말로 이 여행을 삭제하시겠습니까?', [
             { text: '취소', style: 'cancel' },
             { text: '삭제', style: 'destructive', onPress: async () => { await deleteTrip(currentTrip.id); router.back(); } }
         ]);
@@ -108,7 +115,7 @@ export default function TripDetailScreen() {
     const handleUpdateDates = () => {
         if (!currentTrip) return;
         setIsDateEditVisible(false);
-        Alert.alert('수정', '내용이 초기화됩니다. 계속?', [{ text: '취소' }, { text: '수정', style: 'destructive', onPress: async () => { await updateTripDates(currentTrip.id, currentTrip.title, editStartDate, editEndDate); } }]);
+        showAlert('수정', '내용이 초기화됩니다. 계속?', [{ text: '취소' }, { text: '수정', style: 'destructive', onPress: async () => { await updateTripDates(currentTrip.id, currentTrip.title, editStartDate, editEndDate); } }]);
     };
 
     const confirmImageUpload = async () => {
@@ -129,18 +136,20 @@ export default function TripDetailScreen() {
         if (!currentTrip) return;
         const currentDayObj = currentTrip.days.find(d => d.dayNumber === selectedDay);
         if (!currentDayObj) return;
-        Alert.alert('삭제', `'${itemTitle}' 삭제?`, [
+        showAlert('삭제', `'${itemTitle}' 삭제?`, [
             { text: '취소', style: 'cancel' },
             { text: '삭제', style: 'destructive', onPress: async () => await deleteContentItem(currentTrip.id, currentDayObj.id, itemId) }
         ]);
     };
 
     const handleAddPhoto = async () => {
+        setIsAddSheetVisible(false); // [코다리 부장] 시트 먼저 닫기!
         const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
         if (!result.canceled) setTempImageUri(result.assets[0].uri);
     };
 
     const handleAddFile = async () => {
+        setIsAddSheetVisible(false); // [코다리 부장] 시트 먼저 닫기!
         const currentDayObj = currentTrip?.days.find(d => d.dayNumber === selectedDay);
         if (!currentDayObj || !currentTrip) return;
         const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
@@ -155,6 +164,35 @@ export default function TripDetailScreen() {
 
     const showAddOptions = () => {
         setIsAddSheetVisible(true);
+    };
+
+    // [코다리 부장] 링크 추가 로직 - Alert.prompt 대신 모달 사용! (안드로이드 호환성)
+    // [코다리 부장] 링크 추가 로직 - Alert.prompt 대신 모달 사용! (안드로이드 호환성)
+    const handleAddLink = () => {
+        setIsAddSheetVisible(false); // [코다리 부장] 시트 먼저 닫기!
+        setLinkUrl('');
+        setLinkTitle('');
+        setIsLinkModalVisible(true);
+    };
+
+    const handleSaveLink = async () => {
+        if (!linkUrl.trim()) {
+            showAlert('알림', 'URL을 입력해주세요.');
+            return;
+        }
+
+        const currentDayObj = currentTrip?.days.find(d => d.dayNumber === selectedDay);
+        if (!currentDayObj || !currentTrip) return;
+
+        const formattedUrl = linkUrl.trim().startsWith('http') ? linkUrl.trim() : `https://${linkUrl.trim()}`;
+
+        await addContentItem(currentTrip.id, currentDayObj.id, {
+            title: linkTitle.trim() || linkUrl.trim(), // 제목 없으면 URL 사용
+            type: 'link',
+            uri: formattedUrl
+        });
+
+        setIsLinkModalVisible(false);
     };
 
     // [코다리 부장] 배경 선택: 갤러리 열기
@@ -173,7 +211,7 @@ export default function TripDetailScreen() {
     // [코다리 부장] 배경 삭제: 그라데이션으로 복귀!
     const handleRemoveCoverImage = async () => {
         if (!currentTrip) return;
-        Alert.alert('배경 삭제', '배경 이미지를 삭제하시겠습니까?', [
+        showAlert('배경 삭제', '배경 이미지를 삭제하시겠습니까?', [
             { text: '취소', style: 'cancel' },
             { text: '삭제', style: 'destructive', onPress: async () => await setCoverImage(currentTrip.id, '') }
         ]);
@@ -212,7 +250,7 @@ export default function TripDetailScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
             {/* Custom Header with Sticky/Parallax */}
             <Animated.View style={[
@@ -288,10 +326,10 @@ export default function TripDetailScreen() {
                             <View>
                                 {currentDay?.items.length === 0 ? (
                                     <View style={styles.emptyState}>
-                                        <Ionicons name="images-outline" size={48} color={Colors.textTertiary} />
-                                        <Text style={styles.emptyText}>아직 기록이 없습니다</Text>
+                                        <Ionicons name="document-attach-outline" size={48} color={Colors.textTertiary} />
+                                        <Text style={styles.emptyText}>아직 등록된 자료가 없습니다</Text>
                                         <TouchableOpacity style={styles.addFirstButton} onPress={showAddOptions}>
-                                            <Text style={styles.addFirstButtonText}>첫 번째 추억 남기기</Text>
+                                            <Text style={styles.addFirstButtonText}>첫 번째 자료 첨부하기</Text>
                                         </TouchableOpacity>
                                     </View>
                                 ) : (
@@ -351,7 +389,7 @@ export default function TripDetailScreen() {
             <ActionSheet
                 visible={isAddSheetVisible}
                 onClose={() => setIsAddSheetVisible(false)}
-                title="추억 남기기"
+                title="자료 첨부하기"
                 actions={[
                     {
                         id: 'photo',
@@ -364,6 +402,12 @@ export default function TripDetailScreen() {
                         label: '파일 추가',
                         icon: 'document-attach-outline',
                         onPress: handleAddFile
+                    },
+                    {
+                        id: 'link',
+                        label: '링크 추가',
+                        icon: 'link-outline',
+                        onPress: handleAddLink
                     }
                 ]}
             />
@@ -433,6 +477,54 @@ export default function TripDetailScreen() {
                     </View>
                     {tempCoverImageUri && <Image source={{ uri: tempCoverImageUri }} style={{ flex: 1 }} resizeMode="contain" />}
                 </SafeAreaView>
+            </Modal>
+
+            {/* [코다리 부장] 링크 추가 모달 */}
+            <Modal visible={isLinkModalVisible} transparent={true} animationType="fade">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>링크 추가</Text>
+                        <View style={styles.inputWrapper}>
+                            <Text style={styles.inputLabel}>URL</Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                value={linkUrl}
+                                onChangeText={setLinkUrl}
+                                placeholder="https://example.com"
+                                placeholderTextColor={Colors.textTertiary}
+                                autoCapitalize="none"
+                                keyboardType="url"
+                            />
+                        </View>
+                        <View style={styles.inputWrapper}>
+                            <Text style={styles.inputLabel}>제목 (선택사항)</Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                value={linkTitle}
+                                onChangeText={setLinkTitle}
+                                placeholder="예: 호텔 예약 확인"
+                                placeholderTextColor={Colors.textTertiary}
+                            />
+                        </View>
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                onPress={() => setIsLinkModalVisible(false)}
+                                style={[styles.modalBtn, styles.cancelBtn]}
+                            >
+                                <Text style={styles.cancelBtnText}>취소</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleSaveLink}
+                                style={[styles.modalBtn, styles.confirmBtn]}
+                            >
+                                <Text style={styles.confirmBtnText}>추가</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
 
         </View>
@@ -585,11 +677,64 @@ const styles = StyleSheet.create({
     checkHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 16 },
     checkHeaderText: { color: 'white', fontSize: 16 },
 
-    // Date Edit Modal
+    // Modals
     dateEditOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
     dateEditBox: { width: '80%', backgroundColor: 'white', borderRadius: 20, padding: 24, ...Shadows.large },
     dateEditTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
     input: { backgroundColor: '#F5F5F5', padding: 12, borderRadius: 12, marginBottom: 16 },
     modalButtons: { flexDirection: 'row', justifyContent: 'space-between' },
-    modalBtn: { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center', marginHorizontal: 4, backgroundColor: '#DDD' },
+    modalBtn: { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center', marginHorizontal: 4 },
+
+    // New Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        width: '85%',
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 24,
+        ...Shadows.large,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: Colors.textPrimary,
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    inputWrapper: {
+        marginBottom: 16,
+    },
+    inputLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: Colors.textSecondary,
+        marginBottom: 6,
+        marginLeft: 4,
+    },
+    modalInput: {
+        backgroundColor: '#F5F5F5',
+        padding: 12,
+        borderRadius: 12,
+        fontSize: 16,
+        color: Colors.textPrimary,
+    },
+    cancelBtn: {
+        backgroundColor: '#F5F5F5',
+    },
+    confirmBtn: {
+        backgroundColor: Colors.primary,
+    },
+    cancelBtnText: {
+        color: Colors.textSecondary,
+        fontWeight: '600',
+    },
+    confirmBtnText: {
+        color: 'white',
+        fontWeight: '600',
+    },
 });

@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Dimensions, SafeAreaView, TouchableWithoutFeedback, Easing } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, TouchableWithoutFeedback, Easing, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 const MENU_WIDTH = width * 0.7; // 화면 너비의 70%
@@ -12,15 +13,17 @@ interface SideMenuProps {
 }
 
 export function SideMenu({ visible, onClose }: SideMenuProps) {
+    const [shouldRender, setShouldRender] = useState(visible);
     const slideAnim = useRef(new Animated.Value(-MENU_WIDTH)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     // [코다리 부장] 메뉴 아이템별 애니메이션 값 생성! (쫀득한 등장을 위해) 🍡
-    const itemAnims = useRef([...Array(4)].map(() => new Animated.Value(0))).current;
+    const itemAnims = useRef([...Array(6)].map(() => new Animated.Value(0))).current; // Items count increased
     const router = useRouter();
 
     useEffect(() => {
         if (visible) {
+            setShouldRender(true);
             // 열기 애니메이션: 배경 -> 메뉴 슬라이드 -> 아이템들이 타다닥!
             Animated.sequence([
                 Animated.parallel([
@@ -68,88 +71,109 @@ export function SideMenu({ visible, onClose }: SideMenuProps) {
                         useNativeDriver: true
                     })
                 )
-            ]).start();
+            ]).start(() => {
+                setShouldRender(false);
+            });
         }
     }, [visible]);
 
-    if (!visible) return null;
+    if (!shouldRender) return null;
+
+    const handleNavigation = (path: string) => {
+        onClose();
+        // [코다리 부장] 메뉴 닫히는 시간(250ms)보다 조금 여유있게 이동!
+        setTimeout(() => {
+            router.push(path as any);
+        }, 300);
+    };
 
     const menuItems = [
         { id: 'profile', icon: 'person-outline', label: '내 프로필 (준비중)' },
-        { id: 'notice', icon: 'megaphone-outline', label: '공지사항 (준비중)' },
-        { id: 'settings', icon: 'settings-outline', label: '설정', action: () => { onClose(); router.push('/(tabs)/settings'); } },
+        {
+            id: 'expenses',
+            icon: 'calculator-outline',
+            label: '경비 계산기',
+            action: () => handleNavigation('/expenses')
+        },
+        {
+            id: 'itinerary',
+            icon: 'map-outline',
+            label: '일정표',
+            action: () => handleNavigation('/itinerary')
+        },
+        // { id: 'notice', icon: 'megaphone-outline', label: '공지사항 (준비중)' },
+        {
+            id: 'settings',
+            icon: 'settings-outline',
+            label: '설정',
+            action: () => handleNavigation('/(tabs)/settings')
+        },
         { id: 'version', icon: 'information-circle-outline', label: '앱 버전 v1.0.0' },
     ];
 
     return (
-        <Modal
-            transparent={true}
-            visible={visible}
-            onRequestClose={onClose}
-        >
-            <View style={styles.container}>
-                {/* 배경 오버레이 (클릭 시 닫힘) */}
-                <TouchableWithoutFeedback onPress={onClose}>
-                    <Animated.View style={[styles.overlay, { opacity: fadeAnim }]} />
-                </TouchableWithoutFeedback>
+        <View style={[styles.container, StyleSheet.absoluteFill]}>
+            {/* 배경 오버레이 (클릭 시 닫힘) */}
+            <TouchableWithoutFeedback onPress={onClose}>
+                <Animated.View style={[styles.overlay, { opacity: fadeAnim }]} />
+            </TouchableWithoutFeedback>
 
-                {/* 슬라이딩 메뉴 */}
-                <Animated.View
-                    style={[
-                        styles.menuContainer,
-                        { transform: [{ translateX: slideAnim }] }
-                    ]}
-                >
-                    <SafeAreaView style={styles.menuContent}>
-                        {/* 메뉴 헤더 */}
-                        <View style={styles.header}>
-                            <Text style={styles.headerTitle}>Daygo</Text>
-                            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
-                        </View>
+            {/* 슬라이딩 메뉴 */}
+            <Animated.View
+                style={[
+                    styles.menuContainer,
+                    { transform: [{ translateX: slideAnim }] }
+                ]}
+            >
+                <SafeAreaView style={styles.menuContent} edges={['top', 'bottom']}>
+                    {/* 메뉴 헤더 */}
+                    <View style={styles.header}>
+                        <Text style={styles.headerTitle}>Daygo</Text>
+                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                            <Ionicons name="close" size={24} color="#333" />
+                        </TouchableOpacity>
+                    </View>
 
-                        {/* 메뉴 목록 */}
-                        <View style={styles.menuList}>
-                            {menuItems.map((item, index) => (
-                                <Animated.View
-                                    key={index}
-                                    style={{
-                                        opacity: itemAnims[index],
-                                        transform: [{
-                                            translateX: itemAnims[index].interpolate({
-                                                inputRange: [0, 1],
-                                                outputRange: [-50, 0] // 왼쪽에서 스르륵 들어오는 효과
-                                            })
-                                        }]
-                                    }}
+                    {/* 메뉴 목록 */}
+                    <View style={styles.menuList}>
+                        {menuItems.map((item, index) => (
+                            <Animated.View
+                                key={index}
+                                style={{
+                                    opacity: itemAnims[index],
+                                    transform: [{
+                                        translateX: itemAnims[index].interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [-50, 0] // 왼쪽에서 스르륵 들어오는 효과
+                                        })
+                                    }]
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.menuItem}
+                                    onPress={item.action}
                                 >
-                                    <TouchableOpacity
-                                        style={styles.menuItem}
-                                        onPress={item.action}
-                                    >
-                                        <Ionicons name={item.icon as any} size={24} color="#666" style={styles.menuIcon} />
-                                        <Text style={styles.menuLabel}>{item.label}</Text>
-                                    </TouchableOpacity>
-                                </Animated.View>
-                            ))}
-                        </View>
+                                    <Ionicons name={item.icon as any} size={24} color="#666" style={styles.menuIcon} />
+                                    <Text style={styles.menuLabel}>{item.label}</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        ))}
+                    </View>
 
-                        {/* 하단 푸터 */}
-                        <View style={styles.footer}>
-                            <Text style={styles.footerText}>© 2026 Daygo Travel</Text>
-                        </View>
-                    </SafeAreaView>
-                </Animated.View>
-            </View>
-        </Modal>
+                    {/* 하단 푸터 */}
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>© 2026 Daygo Travel</Text>
+                    </View>
+                </SafeAreaView>
+            </Animated.View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        flexDirection: 'row',
+        zIndex: 1000,
+        elevation: 10, // Android elevation
     },
     overlay: {
         position: 'absolute',

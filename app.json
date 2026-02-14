@@ -15,7 +15,7 @@
     },
     "android": {
       "package": "com.daygo.app",
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {},
     "scheme": "daygo",

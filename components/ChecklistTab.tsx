@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Trip, ChecklistItem } from '@/types';
 import { useTripStore } from '@/store/tripStore';
+import { useAlert } from '@/components/AlertProvider';
+import { Colors } from '@/lib/theme';
 
 interface ChecklistTabProps {
     trip: Trip;
 }
 
 export default function ChecklistTab({ trip }: ChecklistTabProps) {
-    // [코다리 부장] 준비물 추가/토글/삭제 기능을 스토어에서 쏙쏙 가져옵니다!
-    const { addChecklistItem, toggleChecklistItem, removeChecklistItem } = useTripStore();
+    // [코다리 부장] 준비물 추가/토글/삭제/수정 기능을 스토어에서 가져옵니다!
+    const { addChecklistItem, toggleChecklistItem, removeChecklistItem, updateChecklistItem } = useTripStore();
+    const { showAlert } = useAlert();
     const [newItemText, setNewItemText] = useState('');
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingText, setEditingText] = useState('');
 
     // [코다리 부장] 준비물 추가 함수입니다. 빈 칸은 안 돼요! 🙅‍♂️
     const handleAddItem = async () => {
@@ -21,30 +26,102 @@ export default function ChecklistTab({ trip }: ChecklistTabProps) {
         setNewItemText(''); // 입력창 비워주는 센스! ✨
     };
 
-    const renderItem = ({ item }: { item: ChecklistItem }) => (
-        <View style={styles.itemContainer}>
-            <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => toggleChecklistItem(trip.id, item.id)}
-            >
-                <Ionicons
-                    name={item.isChecked ? "checkbox" : "square-outline"}
-                    size={24}
-                    color={item.isChecked ? "#007AFF" : "#666"}
-                />
-                <Text style={[styles.itemText, item.isChecked && styles.itemTextChecked]}>
-                    {item.text}
-                </Text>
-            </TouchableOpacity>
+    // [코다리 부장] 준비물 수정 시작!
+    const startEditing = (item: ChecklistItem) => {
+        setEditingId(item.id);
+        setEditingText(item.text);
+    };
 
-            <TouchableOpacity
-                onPress={() => removeChecklistItem(trip.id, item.id)}
-                style={styles.deleteButton}
-            >
-                <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-            </TouchableOpacity>
-        </View>
-    );
+    // [코다리 부장] 준비물 수정 완료! 사용자의 요청대로 확인창 없이 바로 저장합니다.
+    const handleUpdateItem = async () => {
+        if (!editingId || !editingText.trim()) return;
+
+        await updateChecklistItem(trip.id, editingId, editingText.trim());
+        setEditingId(null);
+        setEditingText('');
+    };
+
+    // [코다리 부장] 준비물 삭제! 커스텀 UI 알림창을 사용합니다.
+    const handleDeleteItem = (itemId: string) => {
+        showAlert(
+            "준비물 삭제",
+            "정말 이 항목을 삭제하시겠습니까?",
+            [
+                { text: "취소", style: "cancel" },
+                {
+                    text: "삭제",
+                    style: "destructive",
+                    onPress: async () => {
+                        await removeChecklistItem(trip.id, itemId);
+                    }
+                }
+            ]
+        );
+    };
+
+    const renderItem = ({ item }: { item: ChecklistItem }) => {
+        const isEditing = editingId === item.id;
+
+        return (
+            <View style={styles.itemContainer}>
+                {isEditing ? (
+                    <View style={styles.editContainer}>
+                        <TextInput
+                            style={styles.editInput}
+                            value={editingText}
+                            onChangeText={setEditingText}
+                            autoFocus
+                        />
+                        <View style={styles.editActions}>
+                            <TouchableOpacity
+                                style={styles.doneButton}
+                                onPress={handleUpdateItem}
+                            >
+                                <Text style={styles.doneButtonText}>완료</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.cancelIconButton}
+                                onPress={() => setEditingId(null)}
+                            >
+                                <Ionicons name="close-outline" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                ) : (
+                    <>
+                        <TouchableOpacity
+                            style={styles.checkboxContainer}
+                            onPress={() => toggleChecklistItem(trip.id, item.id)}
+                        >
+                            <Ionicons
+                                name={item.isChecked ? "checkbox" : "square-outline"}
+                                size={24}
+                                color={item.isChecked ? "#007AFF" : "#666"}
+                            />
+                            <Text style={[styles.itemText, item.isChecked && styles.itemTextChecked]}>
+                                {item.text}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.itemActions}>
+                            <TouchableOpacity
+                                onPress={() => startEditing(item)}
+                                style={styles.actionButton}
+                            >
+                                <Ionicons name="create-outline" size={20} color="#007AFF" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => handleDeleteItem(item.id)}
+                                style={styles.actionButton}
+                            >
+                                <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                            </TouchableOpacity>
+                        </View>
+                    </>
+                )}
+            </View>
+        );
+    };
 
     const checklist = trip.checklist || [];
     const sortedChecklist = [...checklist].sort((a, b) => {
@@ -74,20 +151,18 @@ export default function ChecklistTab({ trip }: ChecklistTabProps) {
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.listContent}>
-                {sortedChecklist.length > 0 ? (
-                    sortedChecklist.map((item) => (
-                        <View key={item.id}>
-                            {renderItem({ item })}
-                        </View>
-                    ))
-                ) : (
+            <FlatList
+                data={sortedChecklist}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.listContent}
+                ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <Text style={styles.emptyText}>아직 등록된 준비물이 없습니다.</Text>
                         <Text style={styles.emptySubText}>여행에 필요한 물건들을 적어보세요!</Text>
                     </View>
-                )}
-            </View>
+                }
+            />
         </View>
     );
 }
@@ -148,16 +223,57 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     itemText: {
+        flex: 1,
         fontSize: 16,
         color: '#333',
         marginLeft: 12,
+        marginRight: 8,
     },
     itemTextChecked: {
         color: '#999',
         textDecorationLine: 'line-through',
     },
-    deleteButton: {
-        padding: 8,
+    itemActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    actionButton: {
+        padding: 6,
+        marginLeft: 4,
+    },
+    editContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    editInput: {
+        flex: 1,
+        height: 40,
+        backgroundColor: '#F0F0F0',
+        borderRadius: 6,
+        paddingHorizontal: 12,
+        fontSize: 16,
+        color: '#333',
+    },
+    editActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 8,
+    },
+    doneButton: {
+        backgroundColor: Colors.primary,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 6,
+        marginRight: 8,
+    },
+    doneButtonText: {
+        color: 'white',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    cancelIconButton: {
+        padding: 4,
     },
     emptyContainer: {
         padding: 40,
