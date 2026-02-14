@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>DayGo Icon</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #f0f0f0;
+        }
+        #icon {
+            width: 1024px;
+            height: 1024px;
+        }
+    </style>
+</head>
+<body>
+    <svg id="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background gradient -->
+        <defs>
+            <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#F39C12;stop-opacity:1" />
+            </linearGradient>
+        </defs>
+        
+        <!-- Rounded rectangle background -->
+        <rect width="1024" height="1024" rx="180" fill="url(#bgGradient)"/>
+        
+        <!-- Airplane icon -->
+        <g transform="translate(512, 512)">
+            <!-- Airplane body -->
+            <path d="M 0,-200 L 50,-100 L 200,-50 L 200,0 L 100,50 L 100,100 L 50,150 L 0,100 L -50,150 L -100,100 L -100,50 L -200,0 L -200,-50 L -50,-100 Z" 
+                  fill="white" opacity="0.95"/>
+            <!-- Airplane tail -->
+            <circle cx="0" cy="-180" r="30" fill="white" opacity="0.95"/>
+        </g>
+    </svg>
+    
+    <script>
+        // Instructions: Open this file in browser, right-click on the icon, and "Save image as" icon.png
+        console.log('Right-click the icon and save as PNG (1024x1024)');
+    </script>
+</body>
+</html>

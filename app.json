@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "DayGo",
+    "slug": "daygo",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.daygo.app"
+    },
+    "android": {
+      "package": "com.daygo.app",
+      "versionCode": 2
+    },
+    "web": {},
+    "scheme": "daygo",
+    "plugins": [
+      "expo-router"
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f3a35ac4-6fbb-46b1-84a6-7bfef8033130"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f3a35ac4-6fbb-46b1-84a6-7bfef8033130"
+      }
+    }
+  }
+}
