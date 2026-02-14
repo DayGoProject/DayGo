@@ -110,8 +110,8 @@ iOS, Android, 그리고 **Web**까지 완벽하게 지원합니다.
 ### 1️⃣ 저장소 클론
 
 ```bash
-git clone https://github.com/ImYourNote/travel.git
-cd travel
+git clone https://github.com/DayGoProject/DayGo.git
+cd DayGo
 ```
 
 <br>
@@ -174,6 +174,20 @@ npx expo start
 - `expo-image-picker` - 사진 선택
 - `expo-document-picker` - 파일 선택
 - `@react-native-async-storage/async-storage` - 로컬 데이터 저장
+- `expo-localization` - 다국어 및 지역 설정 지원
+- `date-fns` - 날짜 계산 및 포맷팅
+
+<br>
+
+### 🎖️ 신규 추가 기능 (Special Features)
+
+| 기능 | 설명 |
+|------|------|
+| **공휴일 정보** | 전 세계 주요 국가의 공휴일 데이터를 기반으로 여행 일정 최적화 지원 |
+| **다크/라이트 테마** | 사용자 취향과 환경에 맞는 시각적 테마 제공 |
+| **업데이트 체커** | 새로운 버전 출시 시 사용자에게 즉각적인 알림 제공 |
+| **커버 이미지 설정** | 여행별 개성을 살릴 수 있는 맞춤형 커버 이미지 기능 |
+| **하이브리드 파일 시스템** | 모바일과 웹 환경 모두에서 안정적인 데이터 저장 및 관리 |
 
 <br>
 
@@ -184,7 +198,7 @@ npx expo start
 ## 📂 프로젝트 구조
 
 ```
-travel/
+DayGo/
 ├── app/                      # Expo Router 화면
 │   ├── (tabs)/              # 탭 네비게이션
 │   │   ├── index.tsx        # 여행 목록 화면
@@ -249,7 +263,9 @@ travel/
 ### 🔜 Phase 2: 고급 기능
 - [ ] 파티원 위치 공유
 - [ ] 그룹 채팅
-- [x] 준비물 체크리스트
+- [x] 준비물 체크리스트 (완료)
+- [x] 전 세계 공휴일 정보 연동 (완료)
+- [x] 다크/라이트 모드 테마 지원 (완료)
 - [ ] 여행 일정 공유
 
 <br>
@@ -304,7 +320,7 @@ DayGo는 오픈소스 프로젝트입니다! 기여를 환영합니다. 🎉
 
 ## 💬 문의 및 지원
 
-- **이슈 등록**: [GitHub Issues](https://github.com/ImYourNote/travel/issues)
+- **이슈 등록**: [GitHub Issues](https://github.com/DayGoProject/DayGo/issues)
 - **이메일**: ktnote5716@gmail.com
 
 <br>
