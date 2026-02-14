@@ -74,18 +74,20 @@ export default function ChecklistTab({ trip }: ChecklistTabProps) {
                 </TouchableOpacity>
             </View>
 
-            <FlatList
-                data={sortedChecklist}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.listContent}
-                ListEmptyComponent={
+            <View style={styles.listContent}>
+                {sortedChecklist.length > 0 ? (
+                    sortedChecklist.map((item) => (
+                        <View key={item.id}>
+                            {renderItem({ item })}
+                        </View>
+                    ))
+                ) : (
                     <View style={styles.emptyContainer}>
                         <Text style={styles.emptyText}>아직 등록된 준비물이 없습니다.</Text>
                         <Text style={styles.emptySubText}>여행에 필요한 물건들을 적어보세요!</Text>
                     </View>
-                }
-            />
+                )}
+            </View>
         </View>
     );
 }
