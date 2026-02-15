@@ -93,6 +93,19 @@ iOS, Android, 그리고 **Web**까지 완벽하게 지원합니다.
 
 <br>
 
+### 🎖️ 신규 추가 기능 (Special Features)
+
+| 기능 | 설명 |
+|------|------|
+| **환율 계산기** | 실시간 환율 정보를 바탕으로 여행지 통화를 한화로 즉시 계산 |
+| **예산 및 가계부** | 여행 전체 예산 설정 및 일차별 지출 내역 관리 (공동 경비 지원) |
+| **공휴일 정보** | 전 세계 주요 국가의 공휴일 데이터를 확인하여 일정 최적화 지원 |
+| **스마트 일정** | 시간대별 상세 일정을 구성하고 타임라인 형태로 시각화 |
+| **테마 지원** | 사용자 취향에 맞는 다크/라이트 모드 테마 지원 |
+| **업데이트 체커** | 앱 실행 시 최신 업데이트 여부를 자동으로 확인 |
+
+<br>
+
 ---
 
 <br>
@@ -110,8 +123,8 @@ iOS, Android, 그리고 **Web**까지 완벽하게 지원합니다.
 ### 1️⃣ 저장소 클론
 
 ```bash
-git clone https://github.com/ImYourNote/travel.git
-cd travel
+git clone https://github.com/DayGoProject/DayGo.git
+cd DayGo
 ```
 
 <br>
@@ -174,6 +187,9 @@ npx expo start
 - `expo-image-picker` - 사진 선택
 - `expo-document-picker` - 파일 선택
 - `@react-native-async-storage/async-storage` - 로컬 데이터 저장
+- `expo-localization` - 다국어 및 지역 설정 지원
+- `date-fns` - 날짜 계산 및 포맷팅
+- `date-holidays` - 전 세계 공휴일 정보 데이터베이스
 
 <br>
 
@@ -246,17 +262,20 @@ travel/
 
 <br>
 
-### 🔜 Phase 2: 고급 기능
-- [ ] 파티원 위치 공유
-- [ ] 그룹 채팅
+### ✅ Phase 2: 고급 기능 (완료)
 - [x] 준비물 체크리스트
-- [ ] 여행 일정 공유
+- [x] 환율 계산기 및 예산 관리
+- [x] 시간별 상세 일정 관리
+- [x] 공휴일 정보 조회 및 반영
+- [x] 다크 / 라이트 테마 지원
 
 <br>
 
-### 🚀 Phase 3: 배포
-- [ ] App Store 출시
-- [ ] Google Play Store 출시
+### 🔜 Phase 3: 배포 및 고도화
+- [ ] 파티원 위치 공유 가시화
+- [ ] 그룹 채팅 시스템 통합
+- [ ] 여행 일정 외부 공유 기능 (PDF/이미지)
+- [ ] App Store & Google Play Store 출시
 
 <br>
 
@@ -304,7 +323,7 @@ DayGo는 오픈소스 프로젝트입니다! 기여를 환영합니다. 🎉
 
 ## 💬 문의 및 지원
 
-- **이슈 등록**: [GitHub Issues](https://github.com/ImYourNote/travel/issues)
+- **이슈 등록**: [GitHub Issues](https://github.com/DayGoProject/DayGo/issues)
 - **이메일**: ktnote5716@gmail.com
 
 <br>
