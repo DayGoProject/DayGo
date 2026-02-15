@@ -12,6 +12,10 @@
       "esnext"
     ],
     "moduleResolution": "bundler",
+    "customConditions": [
+      "react-native"
+    ],
+    "jsx": "react-native",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "skipLibCheck": true

@@ -3,6 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Touchab
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useAuthStore } from '@/store/authStore';
 
 const { width, height } = Dimensions.get('window');
 const MENU_WIDTH = width * 0.7; // 화면 너비의 70%
@@ -87,6 +90,16 @@ export function SideMenu({ visible, onClose }: SideMenuProps) {
         }, 300);
     };
 
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            onClose();
+            // RootLayout의 Guard가 자동으로 /login으로 보낼 것입니다.
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    };
+
     const menuItems = [
         { id: 'profile', icon: 'person-outline', label: '내 프로필 (준비중)' },
         {
@@ -108,7 +121,13 @@ export function SideMenu({ visible, onClose }: SideMenuProps) {
             label: '설정',
             action: () => handleNavigation('/(tabs)/settings')
         },
-        { id: 'version', icon: 'information-circle-outline', label: '앱 버전 v1.0.0' },
+        {
+            id: 'logout',
+            icon: 'log-out-outline',
+            label: '로그아웃',
+            action: handleLogout
+        },
+        { id: 'version', icon: 'information-circle-outline', label: '앱 버전 v1.0.1' },
     ];
 
     return (

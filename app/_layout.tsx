@@ -1,5 +1,5 @@
 import 'react-native-url-polyfill/auto';
-import { Slot } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { checkForAppUpdates } from '@/lib/updateChecker';
@@ -8,15 +8,54 @@ import { useUIStore } from '@/store/uiStore';
 import { Colors } from '@/lib/theme';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AlertProvider, useAlert } from '@/components/AlertProvider';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useAuthStore } from '@/store/authStore';
+import { View, ActivityIndicator } from 'react-native';
 
 function AppContent() {
     const { isSideMenuVisible, closeSideMenu } = useUIStore();
     const { showAlert } = useAlert();
+    const { user, setUser, isLoading, setIsLoading } = useAuthStore();
+    const router = useRouter();
+    const segments = useSegments();
 
+    // 1. 앱 업데이트 확인
     useEffect(() => {
-        console.log('Update checker initialized');
         checkForAppUpdates(showAlert);
     }, []);
+
+    // 2. Firebase 인증 상태 감시
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            setUser(firebaseUser);
+            setIsLoading(false);
+        });
+        return unsubscribe;
+    }, []);
+
+    // 3. 인증 가드 (Authentication Guard)
+    useEffect(() => {
+        if (isLoading) return;
+
+        const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
+
+        if (!user && !inAuthGroup) {
+            // 로그인되지 않았는데 보호된 페이지에 있다면 회원가입 화면으로 🏔️
+            router.replace('/signup');
+        } else if (user && inAuthGroup) {
+            // 로그인되었는데 인증 페이지에 있다면 메인으로
+            router.replace('/(tabs)');
+        }
+    }, [user, segments, isLoading]);
+
+    if (isLoading) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+        );
+    }
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
