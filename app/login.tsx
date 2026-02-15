@@ -15,11 +15,12 @@ import {
 import { Colors } from '@/lib/theme';
 import { useRouter } from 'expo-router';
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { useAuthStore } from '@/store/authStore';
 import { getAuthErrorMessage } from '@/lib/auth-utils';
-import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
+import { useEffect } from 'react';
 import * as AuthSession from 'expo-auth-session';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -30,6 +31,39 @@ export default function LoginScreen() {
     const router = useRouter();
     const { setUser } = useAuthStore();
 
+    // [코다리 부장] 작별 전 마지막으로 문법 오류를 잡고 물러납니다.
+    const [request, response, promptAsync] = Google.useAuthRequest({
+        webClientId: '131878944867-n3s5j10pb5vok8qulhkha134ubtjf013.apps.googleusercontent.com',
+        iosClientId: '131878944867-ugk3c9p2i0djhidicvabbc1vr5ds802t.apps.googleusercontent.com',
+        androidClientId: '131878944867-l3vv8rdpb014r4qc20sr4eoatjc4j7aa.apps.googleusercontent.com',
+        redirectUri: 'https://auth.expo.io/@ktnote/daygo',
+    });
+
+    // [디버깅] 실제 전송되는 주소를 최종 확인합니다.
+    useEffect(() => {
+        if (request?.redirectUri) {
+            console.log('[DayGo Debug] Final Approved URI:', request.redirectUri);
+        }
+    }, [request]);
+
+    // 구글 로그인 결과 감시
+    useEffect(() => {
+        if (response?.type === 'success') {
+            const { id_token } = response.params;
+            const credential = GoogleAuthProvider.credential(id_token);
+
+            signInWithCredential(auth, credential)
+                .then((userCredential) => {
+                    setUser(userCredential.user);
+                    router.replace('/(tabs)');
+                })
+                .catch((error) => {
+                    const message = getAuthErrorMessage(error);
+                    Alert.alert('구글 로그인 오류', message);
+                });
+        }
+    }, [response]);
+
     const handleLogin = async () => {
         if (!email || !password) {
             Alert.alert('알림', '이메일과 비밀번호를 입력해 주세요.');
@@ -38,7 +72,20 @@ export default function LoginScreen() {
 
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            setUser(userCredential.user);
+            const user = userCredential.user;
+
+            // [코다리 부장] 가짜 계정 방지를 위해 이메일 인증 여부 확인! 🛡️
+            if (!user.emailVerified) {
+                await signOut(auth);
+                Alert.alert(
+                    '인증 필요',
+                    '이메일 인증이 완료되지 않았습니다. 메일함(또는 스팸함)을 확인해 주세요!',
+                    [{ text: '인증 메일 재전송', onPress: () => router.push('/signup') }, { text: '확인' }]
+                );
+                return;
+            }
+
+            setUser(user);
             router.replace('/(tabs)');
         } catch (error: any) {
             // [코다리 부장] 터미널 로그를 삭제하여 깔끔하게 만들었습니다! 🧹
@@ -47,32 +94,14 @@ export default function LoginScreen() {
         }
     };
 
-    const handleSocialLogin = async (provider: 'kakao' | 'naver' | 'apple' | 'google') => {
-        // [코다리 부장] 소셜 로그인의 '알멩이'를 채우는 중입니다! 🍒
-        switch (provider) {
-            case 'apple':
-                try {
-                    const credential = await AppleAuthentication.signInAsync({
-                        requestedScopes: [
-                            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-                            AppleAuthentication.AppleAuthenticationScope.EMAIL,
-                        ],
-                    });
-                    // TODO: Firebase Credential로 변환하여 로그인 처리 (Firebase Console 설정 필요)
-                    console.log('Apple Login Success', credential);
-                    // Alert.alert('알림', '애플 로그인 성공! (Firebase 연동 대기 중)');
-                } catch (e: any) {
-                    if (e.code !== 'ERR_CANCELED') {
-                        Alert.alert('오류', '애플 로그인 중 문제가 발생했습니다.');
-                    }
-                }
-                break;
-
-            case 'kakao':
-            case 'naver':
-            case 'google':
-                Alert.alert('알림', `${provider === 'kakao' ? '카카오' : provider === 'naver' ? '네이버' : '구글'} 로그인은 각 개발자 센터의 Client ID 설정이 필요합니다. 곧 가이드를 드릴게요!`);
-                break;
+    const handleSocialLogin = async (provider: 'google') => {
+        // [코다리 부장] 이제 진짜 '구글 엔진'이 가동됩니다! 🚀🇬
+        if (provider === 'google') {
+            try {
+                await promptAsync();
+            } catch (error: any) {
+                Alert.alert('로그인 오류', '구글 로그인창을 열 수 없습니다.');
+            }
         }
     };
 
@@ -122,34 +151,16 @@ export default function LoginScreen() {
                             <Text style={styles.loginButtonText}>로그인</Text>
                         </TouchableOpacity>
 
-                        <Text style={styles.socialLabel}>다른 계정으로 로그인</Text>
+                        <Text style={styles.socialLabel}>Google 계정으로 로그인</Text>
 
                         <View style={styles.socialGroup}>
                             <TouchableOpacity
-                                style={[styles.socialIcon, { backgroundColor: '#FEE500' }]}
-                                onPress={() => handleSocialLogin('kakao')}
+                                style={[styles.socialIcon, { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDD' }]}
+                                onPress={() => handleSocialLogin('google')}
                             >
-                                {/* 카카오 아이콘 */}
                                 <Image
-                                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/3669/3669973.png' }}
+                                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }}
                                     style={{ width: 24, height: 24 }}
-                                />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.socialIcon, { backgroundColor: '#03C75A' }]}
-                                onPress={() => handleSocialLogin('naver')}
-                            >
-                                {/* 네이버 아이콘 */}
-                                <Text style={[styles.socialIconText, { color: '#FFF' }]}>N</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.socialIcon, { backgroundColor: '#000000' }]}
-                                onPress={() => handleSocialLogin('apple')}
-                            >
-                                {/* 애플/구글 아이콘 대체 */}
-                                <Image
-                                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/0/747.png' }}
-                                    style={{ width: 22, height: 22, tintColor: '#FFF' }}
                                 />
                             </TouchableOpacity>
                         </View>

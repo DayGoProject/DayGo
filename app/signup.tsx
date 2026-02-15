@@ -15,10 +15,15 @@ import {
 import { Colors } from '@/lib/theme';
 import { useRouter } from 'expo-router';
 import { auth } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { useAuthStore } from '@/store/authStore';
 import { getAuthErrorMessage } from '@/lib/auth-utils';
-import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import { useEffect } from 'react';
+import * as AuthSession from 'expo-auth-session';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignupScreen() {
     const [email, setEmail] = useState('');
@@ -26,6 +31,37 @@ export default function SignupScreen() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const router = useRouter();
     const { setUser } = useAuthStore();
+
+    const [request, response, promptAsync] = Google.useAuthRequest({
+        webClientId: '131878944867-n3s5j10pb5vok8qulhkha134ubtjf013.apps.googleusercontent.com',
+        iosClientId: '131878944867-ugk3c9p2i0djhidicvabbc1vr5ds802t.apps.googleusercontent.com',
+        androidClientId: '131878944867-l3vv8rdpb014r4qc20sr4eoatjc4j7aa.apps.googleusercontent.com',
+        redirectUri: 'https://auth.expo.io/@ktnote/daygo',
+    });
+
+    useEffect(() => {
+        if (request?.redirectUri) {
+            console.log('[DayGo Debug] Final Signup Approved URI:', request.redirectUri);
+        }
+    }, [request]);
+
+    // 구글 로그인/가입 결과 감시
+    useEffect(() => {
+        if (response?.type === 'success') {
+            const { id_token } = response.params;
+            const credential = GoogleAuthProvider.credential(id_token);
+
+            signInWithCredential(auth, credential)
+                .then((userCredential) => {
+                    setUser(userCredential.user);
+                    router.replace('/(tabs)');
+                })
+                .catch((error) => {
+                    const message = getAuthErrorMessage(error);
+                    Alert.alert('구글 가입 오류', message);
+                });
+        }
+    }, [response]);
 
     const handleSignup = async () => {
         if (!email || !password || !confirmPassword) {
@@ -40,8 +76,15 @@ export default function SignupScreen() {
 
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            setUser(userCredential.user);
-            router.replace('/(tabs)');
+
+            // [코다리 부장] 가짜 계정 방지를 위해 인증 메일을 즉시 보냅니다! 📧🛡️
+            await sendEmailVerification(userCredential.user);
+
+            Alert.alert(
+                '인증 메일 발송',
+                '입력하신 이메일로 인증 링크를 보냈습니다. 이메일을 확인한 후 로그인해 주세요!',
+                [{ text: '확인', onPress: () => router.replace('/login') }]
+            );
         } catch (error: any) {
             // [코다리 부장] 터미널 로그를 삭제하여 깔끔하게 만들었습니다! 🧹
             const message = getAuthErrorMessage(error);
@@ -49,9 +92,15 @@ export default function SignupScreen() {
         }
     };
 
-    const handleSocialSignup = async (provider: string) => {
-        // [코다리 부장] 소셜 회원가입도 로그인과 동일한 '알멩이'를 사용합니다!
-        Alert.alert('알림', `${provider === 'kakao' ? '카카오' : provider === 'naver' ? '네이버' : '애플/구글'} 로그인은 설정이 필요합니다. 곧 연동 가이드를 드릴게요!`);
+    const handleSocialSignup = async (provider: 'google') => {
+        // [코다리 부장] 이제 진짜 '구글 엔진'이 가동됩니다! 🚀🇬
+        if (provider === 'google') {
+            try {
+                await promptAsync();
+            } catch (error: any) {
+                Alert.alert('가입 오류', '구글 가입창을 열 수 없습니다.');
+            }
+        }
     };
 
     return (
@@ -104,31 +153,16 @@ export default function SignupScreen() {
                             <Text style={styles.mainButtonText}>가입하기</Text>
                         </TouchableOpacity>
 
-                        <Text style={styles.socialLabel}>간편 회원가입</Text>
+                        <Text style={styles.socialLabel}>Google 계정으로 시작하기</Text>
 
                         <View style={styles.socialGroup}>
                             <TouchableOpacity
-                                style={[styles.socialIcon, { backgroundColor: '#FEE500' }]}
-                                onPress={() => handleSocialSignup('kakao')}
+                                style={[styles.socialIcon, { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDD' }]}
+                                onPress={() => handleSocialSignup('google')}
                             >
                                 <Image
-                                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/3669/3669973.png' }}
+                                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }}
                                     style={{ width: 24, height: 24 }}
-                                />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.socialIcon, { backgroundColor: '#03C75A' }]}
-                                onPress={() => handleSocialSignup('naver')}
-                            >
-                                <Text style={[styles.socialIconText, { color: '#FFF' }]}>N</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.socialIcon, { backgroundColor: '#000000' }]}
-                                onPress={() => handleSocialSignup('apple')}
-                            >
-                                <Image
-                                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/0/747.png' }}
-                                    style={{ width: 22, height: 22, tintColor: '#FFF' }}
                                 />
                             </TouchableOpacity>
                         </View>

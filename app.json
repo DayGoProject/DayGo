@@ -26,13 +26,14 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/f3a35ac4-6fbb-46b1-84a6-7bfef8033130"
+      "url": ""
     },
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "f3a35ac4-6fbb-46b1-84a6-7bfef8033130"
+        "projectId": "b0651528-6741-4721-bc28-7839d961670e"
       }
-    }
+    },
+    "owner": "ktnote"
   }
 }

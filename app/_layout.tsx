@@ -43,8 +43,11 @@ function AppContent() {
         if (!user && !inAuthGroup) {
             // 로그인되지 않았는데 보호된 페이지에 있다면 회원가입 화면으로 🏔️
             router.replace('/signup');
-        } else if (user && inAuthGroup) {
-            // 로그인되었는데 인증 페이지에 있다면 메인으로
+        } else if (user && !user.emailVerified && !inAuthGroup) {
+            // 로그인되었으나 이메일 인증이 안 된 경우 로그인 화면으로 유도 (알림은 전용 화면에서 담당 가능)
+            router.replace('/login');
+        } else if (user && user.emailVerified && inAuthGroup) {
+            // 로그인과 인증이 모두 완료된 경우에만 메인으로
             router.replace('/(tabs)');
         }
     }, [user, segments, isLoading]);

@@ -19,14 +19,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Auth 초기화 (React Native 환경에서 자동 로그인을 위해 AsyncStorage 사용)
-let auth: Auth;
-if (Platform.OS !== 'web') {
-    auth = initializeAuth(app, {
-        persistence: getReactNativePersistence(ReactNativeAsyncStorage),
-    });
-} else {
-    auth = getAuth(app);
-}
+const auth: Auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+});
 
 export { auth };
 export default app;
